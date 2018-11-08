@@ -168,7 +168,8 @@ $.extend(Selectize.prototype, {
 
 		// if splitOn was not passed in, construct it from the delimiter to allow pasting universally
 		if (!self.settings.splitOn && self.settings.delimiter) {
-			var delimiterEscaped = self.settings.delimiter.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+			var oneDelimiter = $.isArray(self.settings.delimiter) ? self.settings.delimiter[0] : self.settings.delimiter;
+			var delimiterEscaped = oneDelimiter.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 			self.settings.splitOn = new RegExp('\\s*' + delimiterEscaped + '+\\s*');
 		}
 
@@ -455,10 +456,12 @@ $.extend(Selectize.prototype, {
 	onKeyPress: function(e) {
 		if (this.isLocked) return e && e.preventDefault();
 		var character = String.fromCharCode(e.keyCode || e.which);
-		if (this.settings.create && this.settings.mode === 'multi' && character === this.settings.delimiter) {
-			this.createItem();
-			e.preventDefault();
-			return false;
+		if (this.settings.create && this.settings.mode === 'multi') {
+			if (($.isArray(this.settings.delimiter) && !!~this.settings.delimiter.indexOf(character)) || character === this.settings.delimiter) {
+				this.createItem();
+				e.preventDefault();
+				return false;
+			}
 		}
 	},
 
@@ -784,7 +787,8 @@ $.extend(Selectize.prototype, {
 		if (this.tagType === TAG_SELECT && this.$input.attr('multiple')) {
 			return this.items;
 		} else {
-			return this.items.join(this.settings.delimiter);
+			var oneDelimiter = $.isArray(self.settings.delimiter) ? self.settings.delimiter[0] : self.settings.delimiter;
+			return this.items.join(oneDelimiter);
 		}
 	},
 
@@ -1041,7 +1045,7 @@ $.extend(Selectize.prototype, {
 		// filter out selected items
 		if (settings.hideSelected) {
 			for (i = result.items.length - 1; i >= 0; i--) {
-				if (self.items.indexOf(hash_key(result.items[i].id)) !== -1) {
+				if (self.items.indexOf(hash_key(result.items[i].id)) !== -1 && !self.settings.duplicates) {
 					result.items.splice(i, 1);
 				}
 			}
@@ -1286,7 +1290,7 @@ $.extend(Selectize.prototype, {
 	 */
 	updateOption: function(value, data) {
 		var self = this;
-		var $item, $item_new;
+		var $items, $item, $item_new;
 		var value_new, index_item, cache_items, cache_options, order_old;
 
 		value     = hash_key(value);
@@ -1303,7 +1307,7 @@ $.extend(Selectize.prototype, {
 		if (value_new !== value) {
 			delete self.options[value];
 			index_item = self.items.indexOf(value);
-			if (index_item !== -1) {
+			if (index_item !== -1 && !self.settings.duplicates) {
 				self.items.splice(index_item, 1, value_new);
 			}
 		}
@@ -1325,10 +1329,13 @@ $.extend(Selectize.prototype, {
 
 		// update the item if it's selected
 		if (self.items.indexOf(value_new) !== -1) {
-			$item = self.getItem(value);
-			$item_new = $(self.render('item', data));
-			if ($item.hasClass('active')) $item_new.addClass('active');
-			$item.replaceWith($item_new);
+			$items = self.getItems(value);
+			for(var i = 0; i < $items.length; i++) {
+				$item = $items[i];
+				$item_new = $(self.render('item', data));
+				if ($item.hasClass('active')) $item_new.addClass('active');
+				$item.replaceWith($item_new);
+			}
 		}
 
 		// invalidate last query because we might have updated the sortField
@@ -1431,6 +1438,29 @@ $.extend(Selectize.prototype, {
 	},
 
 	/**
+	 * Finds elements with a "data-value" attribute
+	 * that matches the given value.
+	 *
+	 * @param {mixed} value
+	 * @param {object} $els
+	 * @return {object}
+	 */
+	getElementsWithValue: function(value, $els) {
+		value = hash_key(value);
+
+		var elements = [];
+		if (typeof value !== 'undefined' && value !== null) {
+			for (var i = 0, n = $els.length; i < n; i++) {
+				if ($els[i].getAttribute('data-value') === value) {
+					elements.push($($els[i]));
+				}
+			}
+		}
+
+		return elements;
+	},
+
+	/**
 	 * Returns the jQuery element of the item
 	 * matching the given value.
 	 *
@@ -1439,6 +1469,17 @@ $.extend(Selectize.prototype, {
 	 */
 	getItem: function(value) {
 		return this.getElementWithValue(value, this.$control.children());
+	},
+
+	/**
+	 * Returns jQuery elements of the item
+	 * matching the given value.
+	 *
+	 * @param {string} value
+	 * @returns {object}
+	 */
+	getItems: function(value) {
+		return this.getElementsWithValue(value, this.$control.children());
 	},
 
 	/**
@@ -1487,7 +1528,9 @@ $.extend(Selectize.prototype, {
 
 			if (self.items.indexOf(value) !== -1) {
 				if (inputMode === 'single') self.close();
-				return;
+				if (!self.settings.duplicates) {
+					return;
+				}
 			}
 
 			if (!self.options.hasOwnProperty(value)) return;

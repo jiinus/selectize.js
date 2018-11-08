@@ -23,7 +23,8 @@ $.fn.selectize = function(settings_user) {
 		if (!data_raw) {
 			var value = $.trim($input.val() || '');
 			if (!settings.allowEmptyOption && !value.length) return;
-			values = value.split(settings.delimiter);
+			var oneDelimiter = $.isArray(settings.delimiter) ? settings.delimiter[0] : settings.delimiter;
+			values = value.split(oneDelimiter);
 			for (i = 0, n = values.length; i < n; i++) {
 				option = {};
 				option[field_label] = values[i];

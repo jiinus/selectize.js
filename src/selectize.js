@@ -787,7 +787,7 @@ $.extend(Selectize.prototype, {
 		if (this.tagType === TAG_SELECT && this.$input.attr('multiple')) {
 			return this.items;
 		} else {
-			var oneDelimiter = $.isArray(self.settings.delimiter) ? self.settings.delimiter[0] : self.settings.delimiter;
+			var oneDelimiter = $.isArray(this.settings.delimiter) ? this.settings.delimiter[0] : this.settings.delimiter;
 			return this.items.join(oneDelimiter);
 		}
 	},

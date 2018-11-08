@@ -2659,7 +2659,12 @@
 				cache = !!value;
 			}
 	
-			// pull markup from cache if it exists
+			// If duplicates are allowed, do not cache rendered items
+			if (this.settings.duplicates) {
+				cache = false
+			}
+	
+			// pull markup from cache if it exists (and if duplicates are not allowed)
 			if (cache) {
 				if (!isset(self.renderCache[templateName])) {
 					self.renderCache[templateName] = {};

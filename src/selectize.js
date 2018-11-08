@@ -74,7 +74,11 @@ var Selectize = function($input, settings) {
 	// option-dependent defaults
 	self.settings.mode = self.settings.mode || (self.settings.maxItems === 1 ? 'single' : 'multi');
 	if (typeof self.settings.hideSelected !== 'boolean') {
-		self.settings.hideSelected = self.settings.mode === 'multi';
+		if (self.settings.duplicates) {
+			self.settings.hideSelected = false
+		} else {
+			self.settings.hideSelected = self.settings.mode === 'multi';
+		}
 	}
 
 	self.initializePlugins(self.settings.plugins);
